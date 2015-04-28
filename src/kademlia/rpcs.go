@@ -35,8 +35,10 @@ type PongMessage struct {
 func (kc *KademliaCore) Ping(ping PingMessage, pong *PongMessage) error {
 	// TODO: Finish implementation
 	pong.MsgID = CopyID(ping.MsgID)
-    // Specify the sender
+	// Specify the sender
+	pong.Sender = kc.kademlia.routes.SelfContact
 	// Update contact, etc
+	kc.kademlia.contactChan <- &ping.Sender
 	return nil
 }
 
@@ -56,7 +58,10 @@ type StoreResult struct {
 }
 
 func (kc *KademliaCore) Store(req StoreRequest, res *StoreResult) error {
-	// TODO: Implement.
+	set := &KeySet{req.Key, req.Value, make(chan int)}
+	res.MsgID = CopyID(req.MsgID)
+	kc.kademlia.contactChan <- &req.Sender
+	kc.kademlia.keyChan <- set
 	return nil
 }
 
@@ -76,7 +81,10 @@ type FindNodeResult struct {
 }
 
 func (kc *KademliaCore) FindNode(req FindNodeRequest, res *FindNodeResult) error {
-	// TODO: Implement.
+	contacts := kc.kademlia.routes.FindClosest(req.NodeID, K)
+	res.MsgID = CopyID(req.MsgID)
+	res.Nodes = make([]Contact, len(contacts))
+	copy(res.Nodes, contacts)
 	return nil
 }
 
@@ -99,6 +107,21 @@ type FindValueResult struct {
 }
 
 func (kc *KademliaCore) FindValue(req FindValueRequest, res *FindValueResult) error {
-	// TODO: Implement.
+	res.MsgID = CopyID(req.MsgID)
+	keys, found := kc.kademlia.LocalFindValueHelper(req.Key)
+	if found == 1 {
+		copy(res.Value, keys.Value)
+		return nil
+	}
+
+	res.Value = nil
+
+	reqNode := FindNodeRequest{req.Sender, req.MsgID, kc.kademlia.routes.SelfContact.NodeID}
+	var resNode FindNodeResult
+
+	kc.FindNode(reqNode, &resNode)
+
+	copy(res.Nodes, resNode.Nodes)
+
 	return nil
 }
