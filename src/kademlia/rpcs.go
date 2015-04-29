@@ -109,6 +109,7 @@ type FindValueResult struct {
 func (kc *KademliaCore) FindValue(req FindValueRequest, res *FindValueResult) error {
 	res.MsgID = CopyID(req.MsgID)
 	keys, found := kc.kademlia.LocalFindValueHelper(req.Key)
+	res.Value = make([]byte, len(keys.Value))
 	if found == 1 {
 		copy(res.Value, keys.Value)
 		return nil

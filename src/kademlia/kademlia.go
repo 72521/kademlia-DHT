@@ -39,6 +39,9 @@ func NewKademlia(laddr string) *Kademlia {
 	k := new(Kademlia)
 	k.NodeID = NewRandomID()
 	k.contactChan = make(chan *Contact)
+	k.keyChan = make(chan *KeySet)
+	k.searchChan = make(chan *KeySet)
+	k.hashtable = make(map[ID][]byte)
 
 	// Set up RPC server
 	// NOTE: KademliaCore is just a wrapper around Kademlia. This type includes
@@ -87,10 +90,15 @@ func handleChan(k *Kademlia) {
 			k.routes.Update(*contact)
 
 		case set := <-k.keyChan:
+			fmt.Printf("Store, value: %s\n", set.Value)
 			k.hashtable[set.Key] = set.Value
 		case set := <-k.searchChan:
 			set.Value = k.hashtable[set.Key]
-			set.resultChan <- 1
+			if set.Value == nil {
+				set.resultChan <- 0
+			} else {
+				set.resultChan <- 1
+			}
 		}
 	}
 }
@@ -165,11 +173,8 @@ func (k *Kademlia) DoFindNode(contact *Contact, searchKey ID) string {
 }
 
 func (k *Kademlia) DoFindValue(contact *Contact, searchKey ID) string {
-	// TODO: Implement
-	// If all goes well, return "OK: <output>", otherwise print "ERR: <messsage>"
-	return "ERR: Not implemented"
 	req := FindValueRequest{*contact, NewRandomID(), searchKey}
-	var res FindValueResult
+	res := new(FindValueResult)
 
 	client, err := rpc.DialHTTP("tcp", dest(contact.Host, contact.Port))
 	if err != nil {
@@ -180,7 +185,7 @@ func (k *Kademlia) DoFindValue(contact *Contact, searchKey ID) string {
 		log.Fatal("Call: ", err)
 		return "ERR: " + err.Error()
 	}
-	return "OK: " + res.MsgID.AsString()
+	return "OK: value --> " + string(res.Value)
 }
 
 func (k *Kademlia) LocalFindValue(searchKey ID) string {
@@ -188,7 +193,7 @@ func (k *Kademlia) LocalFindValue(searchKey ID) string {
 	// If all goes well, return "OK: <output>", otherwise print "ERR: <messsage>"
 	keys, found := k.LocalFindValueHelper(searchKey)
 	if found == 1 {
-		return "OK: " + keys.Key.AsString()
+		return "OK: value --> " + string(keys.Value)
 	}
 	return "Err: cannot find key"
 }
