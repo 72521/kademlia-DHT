@@ -21,7 +21,7 @@ const (
 // Kademlia type. You can put whatever state you need in this.
 type Kademlia struct {
 	NodeID      ID
-	routes      *RoutingTable
+	Routes      *RoutingTable
 	contactChan chan *Contact
 	keyChan     chan *KeySet
 	searchChan  chan *KeySet
@@ -67,7 +67,7 @@ func NewKademlia(laddr string) *Kademlia {
 		}
 	}
 	SelfContact := Contact{k.NodeID, host, uint16(port_int)}
-	k.routes = NewRoutingTable(SelfContact)
+	k.Routes = NewRoutingTable(SelfContact)
 
 	go handleChan(k)
 
@@ -87,10 +87,10 @@ func handleChan(k *Kademlia) {
 	for {
 		select {
 		case contact := <-k.contactChan:
-			k.routes.Update(*contact)
+			fmt.Printf("add new contact: %s\n", contact.NodeID.AsString())
+			k.Routes.Update(contact)
 
 		case set := <-k.keyChan:
-			fmt.Printf("Store, value: %s\n", set.Value)
 			k.hashtable[set.Key] = set.Value
 		case set := <-k.searchChan:
 			set.Value = k.hashtable[set.Key]
@@ -104,14 +104,12 @@ func handleChan(k *Kademlia) {
 }
 
 func (k *Kademlia) FindContact(nodeId ID) (*Contact, error) {
-	if nodeId == k.routes.SelfContact.NodeID {
-		return &k.routes.SelfContact, nil
+	if nodeId == k.Routes.SelfContact.NodeID {
+		return &k.Routes.SelfContact, nil
 	}
-	prefix_length := nodeId.Xor(k.routes.SelfContact.NodeID).PrefixLen()
-	if prefix_length < 1 {
-		prefix_length = 1
-	}
-	bucket := k.routes.buckets[IDBits-prefix_length]
+	prefix_length := nodeId.Xor(k.Routes.SelfContact.NodeID).PrefixLen()
+	bucket := k.Routes.buckets[prefix_length]
+	fmt.Println(bucket)
 	for _, value := range bucket {
 		if value.NodeID.Equals(nodeId) {
 			k.contactChan <- &value
@@ -124,7 +122,7 @@ func (k *Kademlia) FindContact(nodeId ID) (*Contact, error) {
 
 // This is the function to perform the RPC
 func (k *Kademlia) DoPing(host net.IP, port uint16) string {
-	ping := PingMessage{k.routes.SelfContact, NewRandomID()}
+	ping := PingMessage{k.Routes.SelfContact, NewRandomID()}
 	var pong PongMessage
 
 	client, err := rpc.DialHTTP("tcp", dest(host, port))
@@ -141,7 +139,7 @@ func (k *Kademlia) DoPing(host net.IP, port uint16) string {
 }
 
 func (k *Kademlia) DoStore(contact *Contact, key ID, value []byte) string {
-	req := StoreRequest{k.routes.SelfContact, NewRandomID(), key, value}
+	req := StoreRequest{k.Routes.SelfContact, NewRandomID(), key, value}
 	var res StoreResult
 
 	client, err := rpc.DialHTTP("tcp", dest(contact.Host, contact.Port))
@@ -157,7 +155,7 @@ func (k *Kademlia) DoStore(contact *Contact, key ID, value []byte) string {
 }
 
 func (k *Kademlia) DoFindNode(contact *Contact, searchKey ID) string {
-	req := FindNodeRequest{k.routes.SelfContact, NewRandomID(), searchKey}
+	req := FindNodeRequest{k.Routes.SelfContact, NewRandomID(), searchKey}
 	var res FindNodeResult
 
 	client, err := rpc.DialHTTP("tcp", dest(contact.Host, contact.Port))

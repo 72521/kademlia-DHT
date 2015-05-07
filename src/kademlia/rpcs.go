@@ -5,6 +5,7 @@ package kademlia
 // other groups' code.
 
 import (
+	"fmt"
 	"net"
 )
 
@@ -36,8 +37,9 @@ func (kc *KademliaCore) Ping(ping PingMessage, pong *PongMessage) error {
 	// TODO: Finish implementation
 	pong.MsgID = CopyID(ping.MsgID)
 	// Specify the sender
-	pong.Sender = kc.kademlia.routes.SelfContact
+	pong.Sender = kc.kademlia.Routes.SelfContact
 	// Update contact, etc
+	fmt.Println("ping sender: " + ping.Sender.NodeID.AsString())
 	kc.kademlia.contactChan <- &ping.Sender
 	return nil
 }
@@ -81,7 +83,7 @@ type FindNodeResult struct {
 }
 
 func (kc *KademliaCore) FindNode(req FindNodeRequest, res *FindNodeResult) error {
-	contacts := kc.kademlia.routes.FindClosest(req.NodeID, K)
+	contacts := kc.kademlia.Routes.FindClosest(req.NodeID, K)
 	res.MsgID = CopyID(req.MsgID)
 	res.Nodes = make([]Contact, len(contacts))
 	copy(res.Nodes, contacts)
@@ -117,7 +119,7 @@ func (kc *KademliaCore) FindValue(req FindValueRequest, res *FindValueResult) er
 
 	res.Value = nil
 
-	reqNode := FindNodeRequest{req.Sender, req.MsgID, kc.kademlia.routes.SelfContact.NodeID}
+	reqNode := FindNodeRequest{req.Sender, req.MsgID, kc.kademlia.Routes.SelfContact.NodeID}
 	var resNode FindNodeResult
 
 	kc.FindNode(reqNode, &resNode)

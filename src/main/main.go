@@ -47,6 +47,8 @@ func main() {
 
 	ping := new(kademlia.PingMessage)
 	ping.MsgID = kademlia.NewRandomID()
+	ping.Sender = kadem.Routes.SelfContact
+	//TODO: add selfContact
 	var pong kademlia.PongMessage
 	err = client.Call("KademliaCore.Ping", ping, &pong)
 	if err != nil {
@@ -54,6 +56,8 @@ func main() {
 	}
 	log.Printf("ping msgID: %s\n", ping.MsgID.AsString())
 	log.Printf("pong msgID: %s\n", pong.MsgID.AsString())
+
+	kadem.Routes.Update(&pong.Sender)
 
 	in := bufio.NewReader(os.Stdin)
 	quit := false

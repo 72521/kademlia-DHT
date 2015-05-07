@@ -26,6 +26,14 @@ func (id ID) Xor(other ID) (ret ID) {
 	return
 }
 
+func (id ID) ToInt() (result int) {
+	result = 0
+	for i := 0; i < len(id); i++ {
+		result += int(id[i]) << uint(i)
+	}
+	return
+}
+
 // Return -1, 0, or 1, with the same meaning as strcmp, etc.
 func (id ID) Compare(other ID) int {
 	for i := 0; i < IDBytes; i++ {
