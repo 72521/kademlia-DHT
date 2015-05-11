@@ -48,10 +48,6 @@ func (table *RoutingTable) Update(contact *Contact) {
 		*bucket = append((*bucket)[:index], (*bucket)[index+1:]...)
 		*bucket = append(*bucket, element)
 	}
-	fmt.Println("NodeID: ", contact.NodeID.AsString())
-	fmt.Println("Host: ", contact.Host)
-	fmt.Println("bucket: ", *bucket)
-	fmt.Println("table.buckets[]: ", table.buckets[prefix_length])
 }
 
 type ContactDistance struct {

@@ -48,7 +48,6 @@ func main() {
 	ping := new(kademlia.PingMessage)
 	ping.MsgID = kademlia.NewRandomID()
 	ping.Sender = kadem.Routes.SelfContact
-	//TODO: add selfContact
 	var pong kademlia.PongMessage
 	err = client.Call("KademliaCore.Ping", ping, &pong)
 	if err != nil {
