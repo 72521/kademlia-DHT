@@ -50,6 +50,11 @@ func (table *RoutingTable) Update(contact *Contact) {
 	}
 }
 
+/***
+ * if the least recently used contact has response, then
+ * ignore the new element. If the least recently used contact
+ * doesn't have response, then delete it and add the new contact.
+ */
 func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
 	ping := PingMessage{self, NewRandomID()}
 	var pong PongMessage
