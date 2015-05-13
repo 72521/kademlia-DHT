@@ -2,6 +2,7 @@ package kademlia
 
 import (
 	"fmt"
+	"net/rpc"
 	"sort"
 )
 
@@ -40,13 +41,36 @@ func (table *RoutingTable) Update(contact *Contact) {
 		if len(*bucket) <= K {
 			*bucket = append(*bucket, *contact)
 		} else {
-			//TODO
-			fmt.Printf("Error, bucket exceed largest size\n")
+			pingToRemove(bucket, contact, table.SelfContact)
 		}
 
 	} else {
 		*bucket = append((*bucket)[:index], (*bucket)[index+1:]...)
 		*bucket = append(*bucket, element)
+	}
+}
+
+func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
+	ping := PingMessage{self, NewRandomID()}
+	var pong PongMessage
+	remove := 0
+
+	client, err := rpc.DialHTTP("tcp", Dest((*bucket)[0].Host, (*bucket)[0].Port))
+	if err != nil {
+		remove = 1
+	}
+	err = client.Call("KademliaCore.Ping", ping, &pong)
+	if err != nil {
+		remove = 1
+	}
+
+	if remove == 1 {
+		*bucket = (*bucket)[1:]
+		*bucket = append(*bucket, *contact)
+	} else {
+		tmp := (*bucket)[0]
+		*bucket = (*bucket)[1:]
+		*bucket = append(*bucket, tmp)
 	}
 }
 
