@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	alpha = 3
+	ALPHA = 3
 	b     = 8 * IDBytes
 	K     = 20
 )
@@ -125,7 +125,7 @@ func (k *Kademlia) DoPing(host net.IP, port uint16) string {
 	ping := PingMessage{k.Routes.SelfContact, NewRandomID()}
 	var pong PongMessage
 
-	client, err := rpc.DialHTTP("tcp", dest(host, port))
+	client, err := rpc.DialHTTP("tcp", Dest(host, port))
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
@@ -142,7 +142,7 @@ func (k *Kademlia) DoStore(contact *Contact, key ID, value []byte) string {
 	req := StoreRequest{k.Routes.SelfContact, NewRandomID(), key, value}
 	var res StoreResult
 
-	client, err := rpc.DialHTTP("tcp", dest(contact.Host, contact.Port))
+	client, err := rpc.DialHTTP("tcp", Dest(contact.Host, contact.Port))
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
@@ -158,7 +158,7 @@ func (k *Kademlia) DoFindNode(contact *Contact, searchKey ID) string {
 	req := FindNodeRequest{k.Routes.SelfContact, NewRandomID(), searchKey}
 	var res FindNodeResult
 
-	client, err := rpc.DialHTTP("tcp", dest(contact.Host, contact.Port))
+	client, err := rpc.DialHTTP("tcp", Dest(contact.Host, contact.Port))
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
@@ -174,7 +174,7 @@ func (k *Kademlia) DoFindValue(contact *Contact, searchKey ID) string {
 	req := FindValueRequest{*contact, NewRandomID(), searchKey}
 	res := new(FindValueResult)
 
-	client, err := rpc.DialHTTP("tcp", dest(contact.Host, contact.Port))
+	client, err := rpc.DialHTTP("tcp", Dest(contact.Host, contact.Port))
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
@@ -219,6 +219,6 @@ func (k *Kademlia) DoIterativeFindValue(key ID) string {
 	return "ERR: Not implemented"
 }
 
-func dest(host net.IP, port uint16) string {
+func Dest(host net.IP, port uint16) string {
 	return host.String() + ":" + strconv.FormatInt(int64(port), 10)
 }
