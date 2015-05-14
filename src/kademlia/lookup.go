@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/rpc"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -76,7 +77,8 @@ func sendQuery(c Contact, active *ConcurrMap, waitChan chan int, nodeChan chan C
 	active.m[c.NodeID] = 1
 	active.Unlock()
 
-	client, err := rpc.DialHTTP("tcp", Dest(c.Host, c.Port))
+	port_str := strconv.Itoa(int(c.Port))
+	client, err := rpc.DialHTTPPath("tcp", Dest(c.Host, c.Port), rpc.DefaultRPCPath+port_str)
 	if err != nil {
 		log.Fatal("DialHTTP", err)
 		active.Lock()
@@ -108,7 +110,7 @@ func terminated(shortlist []ContactDistance, active *ConcurrMap) bool {
 		fmt.Println("shortlist length: ", len(shortlist))
 	}
 
-	for i := 0; i < K; i++ {
+	for i := 0; i < len(shortlist); i++ {
 		active.RLock()
 		a := active.m[shortlist[i].contact.NodeID]
 		active.RUnlock()

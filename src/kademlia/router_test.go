@@ -8,7 +8,7 @@ import (
 func TestRoutingTable(t *testing.T) {
 	Nodes := make([]ID, 0)
 
-	for i := 0; i < 20000; i++ {
+	for i := 0; i < 20; i++ {
 		Nodes = append(Nodes, NewRandomID())
 	}
 	rt := NewRoutingTable(Contact{Nodes[0], net.ParseIP("127.0.0.1"), uint16(7890)})

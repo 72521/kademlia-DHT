@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/rpc"
 	"sort"
+	"strconv"
 )
 
 type RoutingTable struct {
@@ -20,8 +21,8 @@ func NewRoutingTable(node Contact) (ret *RoutingTable) {
 
 func (table *RoutingTable) Update(contact *Contact) {
 	prefix_length := contact.NodeID.Xor(table.SelfContact.NodeID).PrefixLen()
-	fmt.Println("prefix_length: ", prefix_length)
 	if prefix_length == 160 {
+		fmt.Println("Error: Prefix_length: ", prefix_length)
 		return
 	}
 
@@ -60,7 +61,8 @@ func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
 	var pong PongMessage
 	remove := 0
 
-	client, err := rpc.DialHTTP("tcp", Dest((*bucket)[0].Host, (*bucket)[0].Port))
+	port_str := strconv.Itoa(int((*bucket)[0].Port))
+	client, err := rpc.DialHTTPPath("tcp", Dest((*bucket)[0].Host, (*bucket)[0].Port), rpc.DefaultRPCPath+port_str)
 	if err != nil {
 		remove = 1
 	}
@@ -77,6 +79,7 @@ func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
 		*bucket = (*bucket)[1:]
 		*bucket = append(*bucket, tmp)
 	}
+	client.Close()
 }
 
 type ContactDistance struct {
