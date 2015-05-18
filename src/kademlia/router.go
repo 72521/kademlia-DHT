@@ -42,7 +42,7 @@ func (table *RoutingTable) Update(contact *Contact) {
 		if len(*bucket) <= K {
 			*bucket = append(*bucket, *contact)
 		} else {
-			pingToRemove(bucket, contact, table.SelfContact)
+			pingToRemove(bucket, contact, &table.SelfContact)
 		}
 
 	} else {
@@ -56,8 +56,8 @@ func (table *RoutingTable) Update(contact *Contact) {
  * ignore the new element. If the least recently used contact
  * doesn't have response, then delete it and add the new contact.
  */
-func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
-	ping := PingMessage{self, NewRandomID()}
+func pingToRemove(bucket *[]Contact, contact *Contact, self *Contact) {
+	ping := PingMessage{*self, NewRandomID()}
 	var pong PongMessage
 	remove := 0
 
@@ -66,6 +66,7 @@ func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
 	if err != nil {
 		remove = 1
 	}
+	defer client.Close()
 	err = client.Call("KademliaCore.Ping", ping, &pong)
 	if err != nil {
 		remove = 1
@@ -79,7 +80,6 @@ func pingToRemove(bucket *[]Contact, contact *Contact, self Contact) {
 		*bucket = (*bucket)[1:]
 		*bucket = append(*bucket, tmp)
 	}
-	client.Close()
 }
 
 type ContactDistance struct {
@@ -93,12 +93,12 @@ func (d ByDist) Len() int           { return len(d) }
 func (d ByDist) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
 func (d ByDist) Less(i, j int) bool { return d[i].Dist < d[j].Dist }
 
-func calcDist(target ID, bucket []Contact, tempList []ContactDistance) {
+func calcDist(target ID, bucket []Contact, tempList *[]ContactDistance) {
 	for _, value := range bucket {
 		distID := value.NodeID.Xor(target)
 		dist := distID.ToInt()
 		cd := &ContactDistance{value, dist}
-		tempList = append(tempList, *cd)
+		*tempList = append(*tempList, *cd)
 	}
 }
 
@@ -106,15 +106,19 @@ func (table *RoutingTable) FindClosest(target ID, count int) (ret []Contact) {
 	ret = make([]Contact, 0)
 	tempList := make([]ContactDistance, 0)
 	prefix_len := target.Xor(table.SelfContact.NodeID).PrefixLen()
-
+	fmt.Println("prefix_len: ", prefix_len)
 	for i := 0; (prefix_len-i >= 0 || prefix_len+i < IDBits) && len(tempList) < count; i++ {
+		if prefix_len == IDBits && prefix_len-i == IDBits {
+			tempList = append(tempList, ContactDistance{table.SelfContact, 0})
+			continue
+		}
 		if prefix_len-i >= 0 {
 			bucket := table.buckets[prefix_len-i]
-			calcDist(target, bucket, tempList)
+			calcDist(target, bucket, &tempList)
 		}
 		if prefix_len+i < IDBits {
 			bucket := table.buckets[prefix_len+i]
-			calcDist(target, bucket, tempList)
+			calcDist(target, bucket, &tempList)
 		}
 	}
 
@@ -122,6 +126,7 @@ func (table *RoutingTable) FindClosest(target ID, count int) (ret []Contact) {
 	if len(tempList) > count {
 		tempList = tempList[:count]
 	}
+
 	for _, value := range tempList {
 		ret = append(ret, value.contact)
 	}

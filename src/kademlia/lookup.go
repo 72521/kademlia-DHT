@@ -17,35 +17,48 @@ type ConcurrMap struct {
 func (k *Kademlia) IterativeFindNode(target ID) []Contact {
 	tempShortlist := k.Routes.FindClosest(target, K)
 	shortlist := make([]ContactDistance, 0)
-	//	var closestNode Contact
+	var closestNode Contact
 	visited := make(map[ID]int)
 	active := new(ConcurrMap)
 	active.m = make(map[ID]int)
 	nodeChan := make(chan Contact)
 
-	//assert shortlist is length of k-->20
-	fmt.Println("shortlist length: ", len(shortlist))
-
 	for _, node := range tempShortlist {
 		shortlist = append(shortlist, ContactDistance{node, node.NodeID.Xor(target).ToInt()})
 	}
+
+	fmt.Println("tempShortlist: ", tempShortlist)
+	//assert shortlist is length of k-->20
+	fmt.Println("shortlist length: ", len(shortlist))
 
 	go func() {
 		for {
 			select {
 			case node := <-nodeChan:
-				shortlist = append(shortlist, ContactDistance{node, node.NodeID.Xor(target).ToInt()})
+				found := 0
+				for _, value := range shortlist {
+					if value.contact.NodeID == node.NodeID {
+						found = 1
+						break
+					}
+				}
+				if found == 0 {
+					shortlist = append(shortlist, ContactDistance{node, node.NodeID.Xor(target).ToInt()})
+				}
 			}
 		}
 	}()
 
 	waitChan := make(chan int, ALPHA)
 
-	for terminated(shortlist, active) {
+	for !terminated(shortlist, active, closestNode) {
 		count := 0
 		for count < ALPHA {
 			for _, c := range shortlist {
 				if visited[c.contact.NodeID] == 0 {
+					if count >= ALPHA {
+						break
+					}
 					go sendQuery(c.contact, active, waitChan, nodeChan)
 					visited[c.contact.NodeID] = 1
 					count++
@@ -53,9 +66,11 @@ func (k *Kademlia) IterativeFindNode(target ID) []Contact {
 			}
 		}
 
+		fmt.Println("waiting")
 		for i := 0; i < ALPHA; i++ {
 			<-waitChan
 		}
+		fmt.Println("counter: ", count)
 	}
 
 	ret := make([]Contact, 0)
@@ -85,6 +100,7 @@ func sendQuery(c Contact, active *ConcurrMap, waitChan chan int, nodeChan chan C
 		active.m[c.NodeID] = 0
 		active.Unlock()
 	}
+	defer client.Close()
 	err = client.Call("KademliaCore.FindNode", args, &reply)
 	if err != nil {
 		log.Fatal("Call: ", err)
@@ -104,16 +120,22 @@ func sendQuery(c Contact, active *ConcurrMap, waitChan chan int, nodeChan chan C
 	waitChan <- 1
 }
 
-func terminated(shortlist []ContactDistance, active *ConcurrMap) bool {
+func terminated(shortlist []ContactDistance, active *ConcurrMap, closestnode Contact) bool {
 	sort.Sort(ByDist(shortlist))
 	if len(shortlist) < K {
 		fmt.Println("shortlist length: ", len(shortlist))
 	}
 
-	for i := 0; i < len(shortlist); i++ {
+	if shortlist[0].contact.NodeID.Equals(closestnode.NodeID) {
+		return true
+	}
+	closestnode = shortlist[0].contact
+
+	for i := 0; i < len(shortlist) && i < K; i++ {
 		active.RLock()
 		a := active.m[shortlist[i].contact.NodeID]
 		active.RUnlock()
+		fmt.Println("a: ", a)
 		if a == 0 {
 			return false
 		}

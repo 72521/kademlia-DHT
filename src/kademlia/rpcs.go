@@ -5,7 +5,6 @@ package kademlia
 // other groups' code.
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -39,7 +38,6 @@ func (kc *KademliaCore) Ping(ping PingMessage, pong *PongMessage) error {
 	// Specify the sender
 	pong.Sender = kc.kademlia.Routes.SelfContact
 	// Update contact, etc
-	fmt.Println("ping sender: " + ping.Sender.NodeID.AsString())
 	kc.kademlia.contactChan <- &ping.Sender
 	return nil
 }

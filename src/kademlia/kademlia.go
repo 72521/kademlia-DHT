@@ -132,14 +132,15 @@ func (k *Kademlia) DoPing(host net.IP, port uint16) string {
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
+	defer func() {
+		client.Close()
+	}()
 	err = client.Call("KademliaCore.Ping", ping, &pong)
 	if err != nil {
 		log.Fatal("Call: ", err)
 		return "ERR: " + err.Error()
 	}
 	k.contactChan <- &(&pong).Sender
-
-	client.Close()
 
 	return "OK: " + pong.MsgID.AsString()
 }
@@ -153,12 +154,12 @@ func (k *Kademlia) DoStore(contact *Contact, key ID, value []byte) string {
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
+	defer client.Close()
 	err = client.Call("KademliaCore.Store", req, &res)
 	if err != nil {
 		log.Fatal("Call: ", err)
 		return "ERR: " + err.Error()
 	}
-	client.Close()
 	return "OK: " + res.MsgID.AsString()
 }
 
@@ -171,12 +172,12 @@ func (k *Kademlia) DoFindNode(contact *Contact, searchKey ID) string {
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
+	defer client.Close()
 	err = client.Call("KademliaCore.FindNode", req, &res)
 	if err != nil {
 		log.Fatal("Call: ", err)
 		return "ERR: " + err.Error()
 	}
-	client.Close()
 	return "OK: " + res.MsgID.AsString()
 }
 
@@ -189,12 +190,12 @@ func (k *Kademlia) DoFindValue(contact *Contact, searchKey ID) string {
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}
+	defer client.Close()
 	err = client.Call("KademliaCore.FindValue", req, &res)
 	if err != nil {
 		log.Fatal("Call: ", err)
 		return "ERR: " + err.Error()
 	}
-	client.Close()
 	return "OK: value --> " + string(res.Value)
 }
 
