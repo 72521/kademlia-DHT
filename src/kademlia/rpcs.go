@@ -117,12 +117,7 @@ func (kc *KademliaCore) FindValue(req FindValueRequest, res *FindValueResult) er
 
 	res.Value = nil
 
-	reqNode := FindNodeRequest{req.Sender, req.MsgID, kc.kademlia.Routes.SelfContact.NodeID}
-	var resNode FindNodeResult
-
-	kc.FindNode(reqNode, &resNode)
-
-	copy(res.Nodes, resNode.Nodes)
+	res.Nodes = kc.kademlia.Routes.FindClosest(req.Key, K)
 
 	return nil
 }

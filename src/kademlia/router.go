@@ -1,7 +1,6 @@
 package kademlia
 
 import (
-	"fmt"
 	"net/rpc"
 	"sort"
 	"strconv"
@@ -22,7 +21,6 @@ func NewRoutingTable(node Contact) (ret *RoutingTable) {
 func (table *RoutingTable) Update(contact *Contact) {
 	prefix_length := contact.NodeID.Xor(table.SelfContact.NodeID).PrefixLen()
 	if prefix_length == 160 {
-		fmt.Println("Error: Prefix_length: ", prefix_length)
 		return
 	}
 
@@ -106,7 +104,6 @@ func (table *RoutingTable) FindClosest(target ID, count int) (ret []Contact) {
 	ret = make([]Contact, 0)
 	tempList := make([]ContactDistance, 0)
 	prefix_len := target.Xor(table.SelfContact.NodeID).PrefixLen()
-	fmt.Println("prefix_len: ", prefix_len)
 	for i := 0; (prefix_len-i >= 0 || prefix_len+i < IDBits) && len(tempList) < count; i++ {
 		if prefix_len == IDBits && prefix_len-i == IDBits {
 			tempList = append(tempList, ContactDistance{table.SelfContact, 0})

@@ -20,12 +20,14 @@ const (
 
 // Kademlia type. You can put whatever state you need in this.
 type Kademlia struct {
-	NodeID      ID
-	Routes      *RoutingTable
-	contactChan chan *Contact
-	keyChan     chan *KeySet
-	searchChan  chan *KeySet
-	hashtable   map[ID][]byte
+	NodeID           ID
+	Routes           *RoutingTable
+	contactChan      chan *Contact
+	keyChan          chan *KeySet
+	searchChan       chan *KeySet
+	hashtable        map[ID][]byte
+	bucketChan       chan int
+	bucketResultChan chan []Contact
 }
 
 type KeySet struct {
@@ -42,6 +44,8 @@ func NewKademlia(laddr string) *Kademlia {
 	k.keyChan = make(chan *KeySet)
 	k.searchChan = make(chan *KeySet)
 	k.hashtable = make(map[ID][]byte)
+	k.bucketChan = make(chan int)
+	k.bucketResultChan = make(chan []Contact)
 
 	// Set up RPC server
 	// NOTE: KademliaCore is just a wrapper around Kademlia. This type includes
@@ -92,6 +96,8 @@ func handleChan(k *Kademlia) {
 		case contact := <-k.contactChan:
 			k.Routes.Update(contact)
 
+		case prefix_length := <-k.bucketChan:
+			k.bucketResultChan <- k.Routes.buckets[prefix_length]
 		case set := <-k.keyChan:
 			k.hashtable[set.Key] = set.Value
 		case set := <-k.searchChan:
@@ -105,13 +111,18 @@ func handleChan(k *Kademlia) {
 	}
 }
 
+func (k *Kademlia) ReadFromBuckets(prefix_length int) []Contact {
+	k.bucketChan <- prefix_length
+	ret := <-k.bucketResultChan
+	return ret
+}
+
 func (k *Kademlia) FindContact(nodeId ID) (*Contact, error) {
 	if nodeId == k.Routes.SelfContact.NodeID {
 		return &k.Routes.SelfContact, nil
 	}
 	prefix_length := nodeId.Xor(k.Routes.SelfContact.NodeID).PrefixLen()
-	bucket := k.Routes.buckets[prefix_length]
-	fmt.Println(bucket)
+	bucket := k.ReadFromBuckets(prefix_length)
 	for _, value := range bucket {
 		if value.NodeID.Equals(nodeId) {
 			k.contactChan <- &value
@@ -221,15 +232,32 @@ func (k *Kademlia) LocalFindValueHelper(searchKey ID) (ret *KeySet, found int) {
 
 func (k *Kademlia) DoIterativeFindNode(id ID) string {
 	// For project 2!
-	return "ERR: Not implemented"
+	ret := k.IterativeFindNode(id, false)
+	if len(ret.contacts) > 0 {
+		return "Success itertativefindnode"
+	} else {
+		return "Failed to iterativefindnode"
+	}
 }
 func (k *Kademlia) DoIterativeStore(key ID, value []byte) string {
 	// For project 2!
-	return "ERR: Not implemented"
+	ret := k.IterativeFindNode(key, false)
+	for _, c := range ret.contacts {
+		go k.DoStore(&c, key, value)
+	}
+
+	return "Success store!"
+
 }
 func (k *Kademlia) DoIterativeFindValue(key ID) string {
 	// For project 2!
-	return "ERR: Not implemented"
+	ret := k.IterativeFindNode(key, true)
+	if ret.value != nil {
+		str := "Key: " + ret.key.AsString() + " --> Value: " + string(ret.value)
+		return str
+	} else {
+		return "Cannot find value"
+	}
 }
 
 func Dest(host net.IP, port uint16) string {
