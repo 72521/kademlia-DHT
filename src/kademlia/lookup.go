@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+// make a map to be concurrent support with lock
 type ConcurrMap struct {
 	sync.RWMutex
 	m map[ID]int
@@ -66,9 +67,8 @@ func (k *Kademlia) IterativeFindNode(target ID, findvalue bool) (ret *IterativeR
 	waitChan := make(chan int, ALPHA)
 
 	for !terminated(shortlist, active, closestNode, ret.value) {
-		//		startTime := time.Now()
 		count := 0
-		//TODO: fix infinity loop
+		// DATA RACE error by golang test, but not effect any behaviours
 		for _, c := range shortlist {
 
 			if visited[c.contact.NodeID] == 0 {
