@@ -121,3 +121,32 @@ func (kc *KademliaCore) FindValue(req FindValueRequest, res *FindValueResult) er
 
 	return nil
 }
+
+//////////////////////////////////////////////////////////////////////
+///Project 3
+/////////////////////////////////////////////////////////////////////
+
+type GetVDORequest struct {
+	Sender Contact
+	MsgID  ID
+	VdoID  ID
+}
+type GetVDOResult struct {
+	MsgID ID
+	VDO   VanashingDataObject
+}
+
+func (kc *KademliaCore) GetVDO(req GetVDORequest, res *GetVDOResult) error {
+	// fill in
+	kc.kademlia.Routes.Update(&req.Sender)
+
+	kc.kademlia.lock.Lock()
+	output, _ := kc.kademlia.mapVDO[req.VdoID]
+	kc.kademlia.lock.Unlock()
+
+	res.MsgID = CopyID(req.MsgID)
+	res.VDO = output
+
+	return nil
+
+}

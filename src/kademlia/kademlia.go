@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"strconv"
+	"sync"
 )
 
 const (
@@ -28,6 +29,12 @@ type Kademlia struct {
 	hashtable        map[ID][]byte
 	bucketChan       chan int
 	bucketResultChan chan []Contact
+
+	//++ for project 3
+	mapVDO map[ID]VanashingDataObject
+	lock   sync.Mutex
+	//++ for project 3
+
 }
 
 type KeySet struct {
@@ -259,6 +266,47 @@ func (k *Kademlia) DoIterativeFindValue(key ID) string {
 		return "Cannot find value"
 	}
 }
+
+////////////////////////for project 3/////////////////////////////
+func (k *Kademlia) DoIterativeFindValue_UsedInVanish(key ID) string {
+	// For project 2!
+	ret := k.IterativeFindNode(key, true)
+	if ret.value != nil {
+		str := string(ret.value)
+		return str
+	} else {
+		return ""
+	}
+}
+
+func (k *Kademlia) DoGetVDO(nodeid ID, vdoid ID) string {
+	//find the right contact using FindClosest
+	right_contact := k.Routes.FindClosest(nodeid, 20)
+
+	//using GetVDO to retrieve the right VDO
+	req := GetVDORequest{right_contact[0], NewRandomID(), vdoid}
+	res := new(GetVDOResult)
+
+	port_str := strconv.Itoa(int(right_contact[0].Port))
+	client, err := rpc.DialHTTPPath("tcp", Dest(right_contact[0].Host, right_contact[0].Port), rpc.DefaultRPCPath+port_str)
+	if err != nil {
+		log.Fatal("DialHTTP: ", err)
+	}
+	defer client.Close()
+	err = client.Call("KademliaCore.GetVDO", req, &res)
+
+	if err != nil {
+		log.Fatal("Call: ", err)
+		return "ERR: " + err.Error()
+	}
+
+	data := string(UnvanishData(*k, res.VDO))
+
+	return data
+
+}
+
+////////////////////////for project 3/////////////////////////////
 
 func Dest(host net.IP, port uint16) string {
 	return host.String() + ":" + strconv.FormatInt(int64(port), 10)

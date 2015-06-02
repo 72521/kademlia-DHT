@@ -4,10 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"fmt"
 	"io"
-    "time"
 	mathrand "math/rand"
-	//"sss"
+	"sss"
+	"time"
 )
 
 type VanashingDataObject struct {
@@ -15,6 +16,8 @@ type VanashingDataObject struct {
 	Ciphertext []byte
 	NumberKeys byte
 	Threshold  byte
+	//add VDOID to be used in getting VDO
+	VDOID ID
 }
 
 func GenerateRandomCryptoKey() (ret []byte) {
@@ -25,9 +28,9 @@ func GenerateRandomCryptoKey() (ret []byte) {
 }
 
 func GenerateRandomAccessKey() (accessKey int64) {
-    r := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
-    accessKey = r.Int63()
-    return
+	r := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
+	accessKey = r.Int63()
+	return
 }
 
 func CalculateSharedKeyLocations(accessKey int64, count int64) (ids []ID) {
@@ -72,11 +75,83 @@ func decrypt(key []byte, ciphertext []byte) (text []byte) {
 	return ciphertext
 }
 
-func VanishData(kadem Kademlia, data []byte, numberKeys byte,
+func VanishData(kadem Kademlia, VDOID ID, data []byte, numberKeys byte,
 	threshold byte) (vdo VanashingDataObject) {
-	return
+	var newVDO VanashingDataObject
+	newVDO.NumberKeys = numberKeys
+	newVDO.Threshold = threshold
+	//newVDO.VDOID = NewRandomID()
+	//Use the provided "GenerateRandomCryptoKey" function to create a random cryptographic key (K)
+	random_K := GenerateRandomCryptoKey()
+
+	//Use the provided "encrypt" function by giving it the random key(K) and text
+	cyphertext := encrypt(random_K, data)
+
+	var kadem_pointer *Kademlia
+	kadem_pointer = &kadem
+
+	newVDO.Ciphertext = cyphertext
+
+	map_K, err := sss.Split(numberKeys, threshold, random_K)
+	if err != nil {
+		return newVDO
+	} else {
+
+		//kademPointer := &kadem
+
+		//Use provided GenerateRandomAccessKey to create an access key
+		newVDO.AccessKey = GenerateRandomAccessKey()
+
+		//Use "CalculateSharedKeyLocations" function to find the right []ID to send RPC
+		keysLocation := CalculateSharedKeyLocations(newVDO.AccessKey, int64(numberKeys))
+		for i := 0; i < len(keysLocation); i++ {
+			k := byte(i + 1)
+			v := map_K[k]
+			all := []byte{k}
+			for x := 0; x < len(v); x++ {
+				all = append(all, v[x])
+			}
+
+			kadem_pointer.DoIterativeStore(keysLocation[i], all)
+
+		}
+	}
+
+	newVDO.VDOID = VDOID
+	return newVDO
 }
 
 func UnvanishData(kadem Kademlia, vdo VanashingDataObject) (data []byte) {
+
+	var kadem_pointer *Kademlia
+	kadem_pointer = &kadem
+
+	map_value := make(map[byte][]byte)
+	//Use vdo.AccessKey and CalculateSharedKeyLocations to search for at least vdo.Threshold keys in the DHT.
+	keysLocation := CalculateSharedKeyLocations(vdo.AccessKey, int64(vdo.Threshold))
+
+	if len(keysLocation) < int(vdo.Threshold) {
+		fmt.Println("ERR: Could not obtain a sufficient number of shared keys")
+		return
+	}
+
+	//Use sss.Combine to recreate the key, K
+	for i := 0; i < len(keysLocation); i++ {
+		value := kadem_pointer.DoIterativeFindValue_UsedInVanish(keysLocation[i])
+		if len(value) == 0 {
+			continue
+		} else {
+			k := value[0]
+			v := value[1:]
+			map_value[k] = []byte(v)
+
+		}
+	}
+
+	//Use sss.Combine to recreate the key, K
+	real_key := sss.Combine(map_value)
+	//use decrypt to unencrypt vdo.Ciphertext.
+	data = decrypt(real_key, vdo.Ciphertext)
+
 	return
 }
