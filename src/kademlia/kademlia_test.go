@@ -93,3 +93,45 @@ func TestIterative(t *testing.T) {
 		t.Error("Return value: ", result)
 	}
 }
+
+func TestDoGetVDO(t *testing.T) {
+	instanceList := make([]*Kademlia, 0)
+
+	for i := 0; i < 200; i++ {
+		instanceList = append(instanceList, NewKademlia("127.0.0.1:"+strconv.Itoa(12000+i)))
+	}
+
+	counter := 0
+	for i := 0; i < len(instanceList); i++ {
+		for j := 0; j < i; j++ {
+			if i == j || math.Abs(float64(i-j)) > 10 {
+				continue
+			}
+			if counter == 2 {
+				counter = 0
+				time.Sleep(10 * time.Millisecond)
+			}
+			tmp_host, tmp_port, _ := StringToIpPort("127.0.0.1:" + strconv.Itoa(12000+j))
+			go instanceList[i].DoPing(tmp_host, tmp_port)
+			counter++
+		}
+	}
+
+	VDOID := NewRandomID()
+	n := byte(30)
+	k := byte(2)
+	data := []byte("Hello World")
+
+	VanishData(*instanceList[0], VDOID, data, n, k)
+
+	result := instanceList[0].DoGetVDO(instanceList[0].NodeID, VDOID)
+	if result != string(data) {
+		t.Error("result: ", result)
+	}
+
+	result = instanceList[10].DoGetVDO(instanceList[0].NodeID, VDOID)
+	if result != string(data) {
+		t.Error("result: ", result)
+	}
+
+}

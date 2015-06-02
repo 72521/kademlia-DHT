@@ -29,12 +29,12 @@ type Kademlia struct {
 	hashtable        map[ID][]byte
 	bucketChan       chan int
 	bucketResultChan chan []Contact
+	VDOmap           VDOmap
+}
 
-	//++ for project 3
-	mapVDO map[ID]VanashingDataObject
-	lock   sync.Mutex
-	//++ for project 3
-
+type VDOmap struct {
+	sync.RWMutex
+	m map[ID]VanashingDataObject
 }
 
 type KeySet struct {
@@ -53,6 +53,7 @@ func NewKademlia(laddr string) *Kademlia {
 	k.hashtable = make(map[ID][]byte)
 	k.bucketChan = make(chan int)
 	k.bucketResultChan = make(chan []Contact)
+	k.VDOmap.m = make(map[ID]VanashingDataObject)
 
 	// Set up RPC server
 	// NOTE: KademliaCore is just a wrapper around Kademlia. This type includes
@@ -281,14 +282,20 @@ func (k *Kademlia) DoIterativeFindValue_UsedInVanish(key ID) string {
 
 func (k *Kademlia) DoGetVDO(nodeid ID, vdoid ID) string {
 	//find the right contact using FindClosest
-	right_contact := k.Routes.FindClosest(nodeid, 20)
+	var right_contact Contact
+	if nodeid == k.NodeID {
+		right_contact = k.Routes.SelfContact
+	} else {
+		contacts := k.Routes.FindClosest(nodeid, 20)
+		right_contact = contacts[0]
+	}
 
 	//using GetVDO to retrieve the right VDO
-	req := GetVDORequest{right_contact[0], NewRandomID(), vdoid}
+	req := GetVDORequest{right_contact, NewRandomID(), vdoid}
 	res := new(GetVDOResult)
 
-	port_str := strconv.Itoa(int(right_contact[0].Port))
-	client, err := rpc.DialHTTPPath("tcp", Dest(right_contact[0].Host, right_contact[0].Port), rpc.DefaultRPCPath+port_str)
+	port_str := strconv.Itoa(int(right_contact.Port))
+	client, err := rpc.DialHTTPPath("tcp", Dest(right_contact.Host, right_contact.Port), rpc.DefaultRPCPath+port_str)
 	if err != nil {
 		log.Fatal("DialHTTP: ", err)
 	}

@@ -140,9 +140,9 @@ func (kc *KademliaCore) GetVDO(req GetVDORequest, res *GetVDOResult) error {
 	// fill in
 	kc.kademlia.Routes.Update(&req.Sender)
 
-	kc.kademlia.lock.Lock()
-	output, _ := kc.kademlia.mapVDO[req.VdoID]
-	kc.kademlia.lock.Unlock()
+	kc.kademlia.VDOmap.RLock()
+	output, _ := kc.kademlia.VDOmap.m[req.VdoID]
+	kc.kademlia.VDOmap.RUnlock()
 
 	res.MsgID = CopyID(req.MsgID)
 	res.VDO = output

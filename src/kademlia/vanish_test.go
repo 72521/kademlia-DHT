@@ -20,7 +20,7 @@ func TestCalculateSharedKeyLocations(t *testing.T) {
 func TestVanishData(t *testing.T) {
 	instanceList := make([]*Kademlia, 0)
 	for i := 0; i < 50; i++ {
-		instanceList = append(instanceList, NewKademlia("127.0.0.1:"+strconv.Itoa(10000+i)))
+		instanceList = append(instanceList, NewKademlia("127.0.0.1:"+strconv.Itoa(11000+i)))
 	}
 
 	counter := 0
@@ -33,7 +33,7 @@ func TestVanishData(t *testing.T) {
 				counter = 0
 				time.Sleep(10 * time.Millisecond)
 			}
-			tmp_host, tmp_port, _ := StringToIpPort("127.0.0.1:" + strconv.Itoa(10000+j))
+			tmp_host, tmp_port, _ := StringToIpPort("127.0.0.1:" + strconv.Itoa(11000+j))
 			go instanceList[i].DoPing(tmp_host, tmp_port)
 			counter++
 		}

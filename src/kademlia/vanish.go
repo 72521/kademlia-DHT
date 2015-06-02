@@ -121,6 +121,10 @@ func VanishData(kadem Kademlia, VDOID ID, data []byte, numberKeys byte,
 	}
 
 	newVDO.VDOID = VDOID
+	kadem.VDOmap.Lock()
+	kadem.VDOmap.m[VDOID] = newVDO
+	kadem.VDOmap.Unlock()
+
 	return newVDO
 }
 
