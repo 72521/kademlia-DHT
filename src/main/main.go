@@ -247,7 +247,7 @@ func executeLine(k *kademlia.Kademlia, line string) (response string) {
 			response = "usage: iterativeFindNode [nodeID]"
 			return
 		}
-		id, err := kademlia.IDFromString(toks[2])
+		id, err := kademlia.IDFromString(toks[1])
 		if err != nil {
 			response = "ERR: Provided an invalid node ID(" + toks[1] + ")"
 			return
@@ -256,13 +256,13 @@ func executeLine(k *kademlia.Kademlia, line string) (response string) {
 
 	case toks[0] == "iterativeStore":
 		// perform an iterative store
-		if len(toks) < 2 || len(toks) > 2 {
+		if len(toks) < 3 || len(toks) > 3 {
 			response = "usage: iterativeStore [key] [value]"
 			return
 		}
 		key, err := kademlia.IDFromString(toks[1])
 		if err != nil {
-			response = "ERR: Provided an invalid key (" + toks[2] + ")"
+			response = "ERR: Provided an invalid key (" + toks[1] + ")"
 			return
 		}
 		response = k.DoIterativeStore(key, []byte(toks[2]))
@@ -273,12 +273,43 @@ func executeLine(k *kademlia.Kademlia, line string) (response string) {
 			response = "usage: iterativeFindValue [key]"
 			return
 		}
-		key, err := kademlia.IDFromString(toks[2])
+		key, err := kademlia.IDFromString(toks[1])
 		if err != nil {
 			response = "ERR: Provided an invalid key (" + toks[1] + ")"
 			return
 		}
 		response = k.DoIterativeFindValue(key)
+
+	case toks[0] == "vanish":
+		if len(toks) < 5 || len(toks) > 5 {
+			response = "usage: vanish [VDO ID] [data] [numberKeys] [threshold]"
+		}
+		key, err := kademlia.IDFromString(toks[1])
+		if err != nil {
+			response = "ERR: Provided an invalid VDO ID (" + toks[1] + ")"
+		}
+		toks_3, _ := strconv.ParseInt(toks[3], 10, 0)
+		toks_4, _ := strconv.ParseInt(toks[4], 10, 0)
+		newVDO := kademlia.VanishData(*k, key, []byte(toks[2]), byte(toks_3), byte(toks_4))
+		if len(newVDO.Ciphertext) != 0 {
+			response = "Success!"
+		} else {
+			response = "Fail!"
+		}
+
+	case toks[0] == "unvanish":
+		if len(toks) < 3 || len(toks) > 3 {
+			response = "usage: unvanish [Node ID] [VDO ID]"
+		}
+		nodeid, err := kademlia.IDFromString(toks[1])
+		if err != nil {
+			response = "ERR: Provided an invalid NODE ID (" + toks[1] + ")"
+		}
+		vdoid, err := kademlia.IDFromString(toks[2])
+		if err != nil {
+			response = "ERR: Provided an invalid VDO ID (" + toks[2] + ")"
+		}
+		response = k.DoGetVDO(nodeid, vdoid)
 	default:
 		response = "ERR: Unknown command"
 	}
