@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log"
 	mathrand "math/rand"
 	"sss"
 	"time"
@@ -94,6 +95,8 @@ func VanishData(kadem Kademlia, VDOID ID, data []byte, numberKeys byte,
 
 	map_K, err := sss.Split(numberKeys, threshold, random_K)
 	if err != nil {
+		log.Fatal("Split", err)
+		fmt.Println("ERROR: Split: ", err)
 		return newVDO
 	} else {
 
