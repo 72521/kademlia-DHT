@@ -102,7 +102,9 @@ func handleChan(k *Kademlia) {
 	for {
 		select {
 		case contact := <-k.contactChan:
+			k.Routes.Lock()
 			k.Routes.Update(contact)
+			k.Routes.Unlock()
 
 		case prefix_length := <-k.bucketChan:
 			k.bucketResultChan <- k.Routes.buckets[prefix_length]
@@ -251,7 +253,8 @@ func (k *Kademlia) DoIterativeStore(key ID, value []byte) string {
 	// For project 2!
 	ret := k.IterativeFindNode(key, false)
 	for _, c := range ret.contacts {
-		go k.DoStore(&c, key, value)
+		new_c := c
+		go k.DoStore(&new_c, key, value)
 	}
 
 	return "Success store!"

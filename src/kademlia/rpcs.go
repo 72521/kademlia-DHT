@@ -138,7 +138,9 @@ type GetVDOResult struct {
 
 func (kc *KademliaCore) GetVDO(req GetVDORequest, res *GetVDOResult) error {
 	// fill in
-	kc.kademlia.Routes.Update(&req.Sender)
+	// kc.kademlia.Routes.Update(&req.Sender)
+	// avoid data race
+	kc.kademlia.contactChan <- &req.Sender
 
 	kc.kademlia.VDOmap.RLock()
 	output, _ := kc.kademlia.VDOmap.m[req.VdoID]

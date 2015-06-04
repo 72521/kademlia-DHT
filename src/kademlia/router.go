@@ -4,11 +4,13 @@ import (
 	"net/rpc"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 type RoutingTable struct {
 	SelfContact Contact
 	buckets     [][]Contact
+	sync.RWMutex
 }
 
 func NewRoutingTable(node Contact) (ret *RoutingTable) {
@@ -101,6 +103,8 @@ func calcDist(target ID, bucket []Contact, tempList *[]ContactDistance) {
 }
 
 func (table *RoutingTable) FindClosest(target ID, count int) (ret []Contact) {
+	table.Lock()
+	defer table.Unlock()
 	ret = make([]Contact, 0)
 	tempList := make([]ContactDistance, 0)
 	prefix_len := target.Xor(table.SelfContact.NodeID).PrefixLen()
