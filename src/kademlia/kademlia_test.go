@@ -121,8 +121,10 @@ func TestDoGetVDO(t *testing.T) {
 	n := byte(30)
 	k := byte(2)
 	data := []byte("Hello World")
+	timeout := 200
 
-	VanishData(*instanceList[0], VDOID, data, n, k)
+	vdo := VanishData(instanceList[0], VDOID, data, n, k)
+	instanceList[0].DoStoreVDO(vdo, timeout)
 
 	result := instanceList[0].DoGetVDO(instanceList[0].NodeID, VDOID)
 	if result != string(data) {

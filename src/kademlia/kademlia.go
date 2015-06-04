@@ -283,6 +283,25 @@ func (k *Kademlia) DoIterativeFindValue_UsedInVanish(key ID) string {
 	}
 }
 
+func (k *Kademlia) DoStoreVDO(newVDO VanashingDataObject, timeout int) string {
+
+	k.VDOmap.Lock()
+	k.VDOmap.m[newVDO.VDOID] = newVDO
+	k.VDOmap.Unlock()
+
+	fmt.Println("**************")
+	fmt.Println(newVDO.AccessKey)
+	fmt.Println("**************")
+	if newVDO.AccessKey != 0 {
+
+		go Refresh(k, newVDO.VDOID, timeout)
+		return "Success!"
+
+	} else {
+		return "Fail!"
+	}
+}
+
 func (k *Kademlia) DoGetVDO(nodeid ID, vdoid ID) string {
 	//find the right contact using FindClosest
 	var right_contact Contact
@@ -310,8 +329,13 @@ func (k *Kademlia) DoGetVDO(nodeid ID, vdoid ID) string {
 		return "ERR: " + err.Error()
 	}
 
-	data := string(UnvanishData(*k, res.VDO))
+	data := string(UnvanishData(k, res.VDO))
 
+	if len(data) != 0 {
+		fmt.Println("Unvanish Success!")
+	} else {
+		fmt.Println("Unvanish Fail!")
+	}
 	return data
 
 }

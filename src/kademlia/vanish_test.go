@@ -43,14 +43,16 @@ func TestVanishData(t *testing.T) {
 	n := byte(30)
 	k := byte(2)
 	data := []byte("Hello World")
+	timeout := 200
 
-	vdo_result := VanishData(*instanceList[0], VDOID, data, n, k)
+	vdo_result := VanishData(instanceList[0], VDOID, data, n, k)
+	instanceList[0].DoStoreVDO(vdo_result, timeout)
 
 	if vdo_result.NumberKeys != n || vdo_result.VDOID != VDOID || vdo_result.Threshold != k {
 		t.Error(vdo_result)
 	}
 
-	unvanish_result := UnvanishData(*instanceList[0], vdo_result)
+	unvanish_result := UnvanishData(instanceList[0], vdo_result)
 
 	t.Log("unvanish_result:", string(unvanish_result))
 
