@@ -15,7 +15,7 @@ import (
 )
 
 import (
-	"kademlia"
+	"github.com/72521/kademlia-DHT/tree/master/src/kademlia"
 )
 
 func main() {
